@@ -9,20 +9,25 @@
 
     <script>
         const baseChars = "abcdefghijklmnopqrstuvwxyz".split("").concat("ss aa ae ao au av ay dz hv lj nj oi ou oo tz vy".split(" "));
-        function isUpperCase(c) { return c !== c.toLocaleLowerCase(); }
+
         function toBaseChar(c) {
-            const cOpts = {sensitivity: 'base'};
-            if (c.localeCompare("9", "en", cOpts) <= 0) { return c; }
+            if (c.localeCompare("9", "en", {sensitivity: 'base'}) <= 0) { return c; }
             for (const baseChar of baseChars) {
-                if (c.localeCompare(baseChar, "en", cOpts) == 0) {
-                    return isUpperCase(c) ? baseChar.toUpperCase() : baseChar;
+                if (c.localeCompare(baseChar, "en", {sensitivity: 'base'}) == 0) {
+                    return c != c.toLocaleLowerCase() ? baseChar.toUpperCase() : baseChar;
                 }
             }
             return c;
         }
+
         function latinify(str) {
             return str.replace(/[^\w\s\d]/g, toBaseChar);
         }
+
+        function cleanName(name) {
+            return latinify(name).replace(/[^a-zA-Z]/g, "").toLowerCase();
+        }
+
         async function sha256(str) {
             return Array.from(new Uint8Array(
                 await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(str))
@@ -30,10 +35,6 @@
         }
 
         const COLORS = 8;
-
-        function cleanName(name) {
-            return latinify(name).replace(/[^a-zA-Z]/g, "").toLowerCase();
-        }
 
         function meshNames(name1, name2) {
             name1 = cleanName(name1);
@@ -59,7 +60,7 @@
             return div;
         }
 
-        let htmlItems = null;
+        const htmlItems = {};
 
         function generate(name1, name2) {
             const parent = document.getElementsByClassName("parent")[0];
@@ -84,10 +85,8 @@
         }
 
         window.onload = function() {
-            htmlItems = {
-                "name1": document.getElementById("name1"),
-                "name2": document.getElementById("name2")
-            };
+            htmlItems.name1 = document.getElementById("name1");
+            htmlItems.name2 = document.getElementById("name2");
         }
         
     </script>
