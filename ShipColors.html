@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>Ship Colors</title>
+    </head>
+
+    <script>
+        let baseChars = "abcdefghijklmnopqrstuvwxyz".split("");
+        baseChars = baseChars.concat("ss aa ae ao au av ay dz hv lj nj oi ou oo tz vy".split(" "));
+        function isUpperCase(c) { return c !== c.toLocaleLowerCase(); }
+        function toBaseChar(c) {
+            let cOpts = {sensitivity: 'base'};
+            if (c.localeCompare("9", "en", cOpts) <= 0) { return c; }
+            for (let baseChar of baseChars) {
+                if (c.localeCompare(baseChar, "en", cOpts) == 0) {
+                    return isUpperCase(c) ? baseChar.toUpperCase() : baseChar;
+                }
+            }
+            return c;
+        }
+        function latinify(str) {
+            return str.replace(/[^\w\s\d]/g, toBaseChar);
+        }
+        async function sha256(str) {
+            const hashBuffer = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+    </script>
+
+    <script>
+        const COLORS = 8;
+
+        function cleanName(name) {
+            return latinify(name).replace(/[^a-zA-Z]/g, "").toLowerCase();
+        }
+
+        function meshNames(name1, name2) {
+            name1 = cleanName(name1);
+            name2 = cleanName(name2);
+            if (name1 < name2) {
+                let temp = name1;
+                name1 = name2;
+                name2 = temp;
+            }
+            let shipName = "";
+            let max = Math.max(name1.length, name2.length);
+            for (let i = 0; i < max; i++) {
+                shipName += name1.charAt(i % name1.length) + name2.charAt(i % name2.length);
+            }
+            return shipName;
+        }
+
+        let htmlItems = {};
+
+        function generate(name1, name2) {
+            if (htmlItems.divs === undefined) {
+                let parent = document.createElement("div");
+                parent.style.height = "200px";
+                let divs = htmlItems.divs = [];
+                for (let i = 0; i < COLORS; i++) {
+                    let div = document.createElement("div");
+                    div.style.height = "200px";
+                    div.style.width = 100 / COLORS + "%";
+                    div.style.float = "left";
+                    divs.push(parent.appendChild(div));
+                }
+                document.body.appendChild(parent);
+            }
+
+            sha256(meshNames(name1, name2)).then((hash) => {
+                let colors = hash.match(new RegExp(`.{${COLORS}}`, "g"));
+                for (let i = 0; i < COLORS; i++) {
+                    let color = Math.round(parseInt(colors[i], 16) / parseInt("F".repeat(64 / COLORS), 16) * parseInt("FFFFFF", 16)).toString(16).padStart(6, "0");
+                    htmlItems.divs[i].style.backgroundColor = "#" + color;
+                }
+            });
+        }
+        
+        function pressed() {
+            generate(htmlItems.name1.value, htmlItems.name2.value);
+        }
+
+        window.onload = function() {
+            htmlItems.name1 = document.getElementById("name1");
+            htmlItems.name2 = document.getElementById("name2");
+        }
+        
+    </script>
+
+    <body>
+        <input id="name1">
+        <input id="name2">
+        <button onclick="pressed()">Generate</button>
+    </body>
+</html>
