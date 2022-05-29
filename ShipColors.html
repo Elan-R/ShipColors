@@ -8,13 +8,12 @@
     </head>
 
     <script>
-        let baseChars = "abcdefghijklmnopqrstuvwxyz".split("");
-        baseChars = baseChars.concat("ss aa ae ao au av ay dz hv lj nj oi ou oo tz vy".split(" "));
+        const baseChars = "abcdefghijklmnopqrstuvwxyz".split("").concat("ss aa ae ao au av ay dz hv lj nj oi ou oo tz vy".split(" "));
         function isUpperCase(c) { return c !== c.toLocaleLowerCase(); }
         function toBaseChar(c) {
-            let cOpts = {sensitivity: 'base'};
+            const cOpts = {sensitivity: 'base'};
             if (c.localeCompare("9", "en", cOpts) <= 0) { return c; }
-            for (let baseChar of baseChars) {
+            for (const baseChar of baseChars) {
                 if (c.localeCompare(baseChar, "en", cOpts) == 0) {
                     return isUpperCase(c) ? baseChar.toUpperCase() : baseChar;
                 }
@@ -25,15 +24,11 @@
             return str.replace(/[^\w\s\d]/g, toBaseChar);
         }
         async function sha256(str) {
-            const hashBuffer = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-
-            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            return hashHex;
+            return Array.from(new Uint8Array(
+                await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(str))
+            )).map(b => b.toString(16).padStart(2, "0")).join("");
         }
-    </script>
 
-    <script>
         const COLORS = 8;
 
         function cleanName(name) {
@@ -44,40 +39,42 @@
             name1 = cleanName(name1);
             name2 = cleanName(name2);
             if (name1 < name2) {
-                let temp = name1;
+                const temp = name1;
                 name1 = name2;
                 name2 = temp;
             }
             let shipName = "";
-            let max = Math.max(name1.length, name2.length);
-            for (let i = 0; i < max; i++) {
+            for (let i = 0; i < Math.max(name1.length, name2.length); i++) {
                 shipName += name1.charAt(i % name1.length) + name2.charAt(i % name2.length);
             }
             return shipName;
         }
 
-        let htmlItems = {};
+        function createColor() {
+            const div = document.createElement("div");
+            const color = document.createElement("div");
+            div.style.width = color.style.width = 100 / COLORS + "%";
+            div.appendChild(color);
+            div.appendChild(document.createElement("p"));
+            return div;
+        }
+
+        let htmlItems = null;
 
         function generate(name1, name2) {
-            if (htmlItems.divs === undefined) {
-                let parent = document.createElement("div");
-                parent.style.height = "200px";
-                let divs = htmlItems.divs = [];
+            const parent = document.getElementsByClassName("parent")[0];
+            if (parent.childElementCount == 0) {
+                const divs = htmlItems.divs = [];
                 for (let i = 0; i < COLORS; i++) {
-                    let div = document.createElement("div");
-                    div.style.height = "200px";
-                    div.style.width = 100 / COLORS + "%";
-                    div.style.float = "left";
-                    divs.push(parent.appendChild(div));
+                    divs.push(parent.appendChild(createColor()));
                 }
-                document.body.appendChild(parent);
             }
 
             sha256(meshNames(name1, name2)).then((hash) => {
-                let colors = hash.match(new RegExp(`.{${COLORS}}`, "g"));
+                const colors = hash.match(new RegExp(`.{${COLORS}}`, "g"));
                 for (let i = 0; i < COLORS; i++) {
-                    let color = Math.round(parseInt(colors[i], 16) / parseInt("F".repeat(64 / COLORS), 16) * parseInt("FFFFFF", 16)).toString(16).padStart(6, "0");
-                    htmlItems.divs[i].style.backgroundColor = "#" + color;
+                    const div = htmlItems.divs[i];
+                    div.firstChild.style.backgroundColor = div.lastChild.innerText = "#" + Math.round(parseInt(colors[i], 16) / parseInt("F".repeat(64 / COLORS), 16) * parseInt("FFFFFF", 16)).toString(16).padStart(6, "0").toUpperCase();
                 }
             });
         }
@@ -87,15 +84,42 @@
         }
 
         window.onload = function() {
-            htmlItems.name1 = document.getElementById("name1");
-            htmlItems.name2 = document.getElementById("name2");
+            htmlItems = {
+                "name1": document.getElementById("name1"),
+                "name2": document.getElementById("name2")
+            };
         }
         
     </script>
+
+    <style>
+        .parent {
+            margin: 5px;
+            height: 200px;
+            position: relative;
+        }
+
+        div.parent > * {
+            height: 200px;
+            float: left;
+        }
+
+        div.parent > * > div {
+            height: 200px;
+            float: left;
+            position: absolute;
+        }
+
+        div.parent > * > p {
+            margin: 5px;
+            position: absolute;
+        }
+    </style>
 
     <body>
         <input id="name1">
         <input id="name2">
         <button onclick="pressed()">Generate</button>
+        <div class="parent"></div>
     </body>
 </html>
